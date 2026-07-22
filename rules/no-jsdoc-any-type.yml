@@ -1,8 +1,26 @@
 id: no-jsdoc-any-type
 language: javascript
 message: >-
-  Prefer `unknown` over `any` (CLAUDE.md SHOULD) and narrow with type guards
+  `any` in a JSDoc `@$TAG` defeats type-checking here (CLAUDE.md SHOULD: prefer
+  `unknown`). Fix: name the concrete type if you know it; otherwise type it
+  `unknown` and NARROW before use — `@voxpelli/typed-utils` `isObject(x)` /
+  `typesafeIsArray(x)` for the object/array boundary, or a `x is T` predicate.
+  Not auto-fixed: the correct narrower is context-specific (only you know what
+  the value actually is).
 severity: warning
+# `pattern: $COMMENT` binds the whole comment so `transform` can surface WHICH
+# tag carried the `any` into the message (regex named captures can't reach the
+# message directly — they must go through `transform`, per ast-grep). No `fix:`
+# — an automatic `any`→`unknown` swap would leave the now-`unknown` value
+# unnarrowed at every use site, trading a silent `any` for a hard tsc error the
+# author still has to resolve by hand; better to point them at the narrower.
 rule:
+  pattern: $COMMENT
   kind: comment
   regex: '@(param|returns|type|property)\s*\{[^}]*\bany\b'
+transform:
+  TAG:
+    replace:
+      source: $COMMENT
+      replace: '(?s)^.*?@(?<tag>param|returns|type|property)\s*\{[^}]*\bany\b.*$'
+      by: '$tag'

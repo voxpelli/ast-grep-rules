@@ -25,6 +25,17 @@ valid:
 # a plain `/* … */` block comment (not JSDoc `/**`) mentioning import() in prose
 - |
   /* import('mod').Foo lives upstream */
+# `@typedef {import(...)}` is a type ALIAS / cross-module re-export, not a
+# use-site — hoisting would delete the export. Must NOT fire.
+- |
+  /** @typedef {import('mod').Foo} Foo */
+# a type-predicate return — the hoisted @import form doesn't resolve in
+# predicate position, so the inline import must stay. Must NOT fire.
+- |
+  /**
+   * @param {unknown} v
+   * @returns {v is import('mod').Foo}
+   */
 invalid:
 - |
   /**
@@ -32,3 +43,10 @@ invalid:
    */
 - |
   const y = /** @type {import('mod').Bar} */ (raw)
+# a `@typedef {object}` block whose `@property` carries an inline import IS a
+# use-site (not the alias form) — must still fire.
+- |
+  /**
+   * @typedef {object} Shape
+   * @property {import('mod').Baz} field
+   */

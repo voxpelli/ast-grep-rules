@@ -1,8 +1,9 @@
 id: no-jsdoc-object-typedef
 language: javascript
 message: >-
-  Drop `{object}` from `@typedef` when `@property` tags follow — use
-  `@typedef Name`, not `@typedef {object} Name`
+  Redundant `{object}` on `@typedef {object} $NAME` — the `@property` tags
+  below already define the shape. AUTO-FIXABLE: delete `{object} ` so it reads
+  `@typedef $NAME` (apply this rule's `fix`, i.e. `ast-grep scan --update-all`).
 severity: warning
 rule:
   pattern: $COMMENT
@@ -14,4 +15,9 @@ transform:
       source: $COMMENT
       replace: '\{object\}\s*'
       by: ''
+  NAME:
+    replace:
+      source: $COMMENT
+      replace: '(?s)^.*?@typedef\s+\{object\}\s+(?<n>[A-Za-z0-9_$]+).*$'
+      by: '$n'
 fix: $FIXED

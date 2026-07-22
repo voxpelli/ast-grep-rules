@@ -1,21 +1,56 @@
 id: no-inline-jsdoc-import
 language: javascript
 message: >-
-  Hoist inline `import('module').Type` out of the JSDoc tag — declare it once
-  in a top-level `/** @import { Type } from 'module' */` (placed after the
-  runtime imports) and use the bare `Type` at the use site
+  Inline import() in a JSDoc type — hoist it in two edits: (1) add a top-level
+  `/** @import { $TYP } from '$MOD' */` after the file's import statements;
+  (2) replace the inline `import('$MOD').$TYP` here with the bare `$TYP`. Not
+  auto-fixed on purpose — doing only (2) leaves `$TYP` undefined until (1)
+  exists, and ast-grep can't make edit (1) from this match.
 severity: warning
-# NOT auto-fixable (deliberately no `fix`/`transform`): a correct fix must BOTH
-# rewrite the inline `import('mod').Type` → bare `Type` AND add a top-level
-# `/** @import { Type } from 'mod' */` elsewhere in the file. ast-grep's fix is
-# node-local (it can only rewrite the matched comment), so auto-rewriting just
-# the inline ref would leave `Type` undefined. Hoist by hand.
+# NOT auto-fixable (deliberately no `fix`): a correct fix must BOTH rewrite the
+# inline ref → bare `$TYP` AND add a top-level `/** @import { $TYP } from
+# '$MOD' */` elsewhere in the file. ast-grep's fix is node-local (the matched
+# comment only) and can't insert that second edit, so rewriting alone would
+# leave `$TYP` undefined. Hoist by hand. The `transform` below feeds the
+# message only — the concrete module + type of the FIRST inline import in the
+# comment (regex named captures can't reach the message directly; per ast-grep
+# they must go through `transform`, the same shape as no-jsdoc-object-typedef).
 rule:
   all:
-    # JSDoc block comments only — `^/\*\*` excludes `//` line comments and plain
-    # `/* … */` blocks, which legitimately mention import() in prose without it
-    # being a type annotation (the false-positive pain point).
+    # Bind the whole comment to $C so `transform` can regex-surgery its text.
+    - pattern: $C
     - kind: comment
-    - regex: '^/\*\*'
-    # inline `import('mod').Type` member access inside a tag
-    - regex: 'import\(\s*[''"][^''"]+[''"]\s*\)\s*\.'
+    # JSDoc block comments only: `^/\*\*` excludes `//` line comments and plain
+    # `/* … */` blocks that merely mention import() in prose. `(?s)` lets `.` span
+    # the newlines of a multi-line JSDoc block.
+    - regex: '(?s)^/\*\*.*import\(\s*[''"][^''"]+[''"]\s*\)\s*\.'
+    # EXCLUDE `@typedef {import('mod').X} X` — a JSDoc type ALIAS, which doubles
+    # as a cross-module type RE-EXPORT (consumable elsewhere as
+    # `import('./this-file.js').X`). Here the inline `import()` IS the
+    # definition; hoisting it to a bare `X` would delete the export and leave
+    # the alias pointing at nothing. Only the alias form is excluded: a
+    # `@typedef {object} Foo` block whose `@property {import('mod').Y}` carries
+    # a use-site is still flagged — the regex requires `import` immediately
+    # after `@typedef {`, which the object form never has.
+    - not:
+        regex: '@typedef\s*\{\s*import\('
+    # EXCLUDE a type-predicate position `x is import('mod').T` (e.g.
+    # `@returns {v is import('mod').T}`, `@type {(v: unknown) => v is
+    # import('mod').T}`). The hoisted `@import` form does NOT resolve in
+    # predicate position on the TS/JSDoc toolchain — the bare `T` reads as
+    # `undefined` there even with a correct top-level `@import` — so the inline
+    # import must stay. Flagging it would drive an agent toward a fix that
+    # breaks the type-guard.
+    - not:
+        regex: '\bis\s+import\('
+transform:
+  MOD:
+    replace:
+      source: $C
+      replace: '(?s)^.*?import\(\s*[''"](?<mod>[^''"]+)[''"]\s*\)\s*\..*$'
+      by: '$mod'
+  TYP:
+    replace:
+      source: $C
+      replace: '(?s)^.*?import\(\s*[''"][^''"]+[''"]\s*\)\s*\.(?<typ>[A-Za-z0-9_$]+).*$'
+      by: '$typ'
