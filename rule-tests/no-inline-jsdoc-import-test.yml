@@ -1,0 +1,23 @@
+id: no-inline-jsdoc-import
+valid:
+- |
+  /** @import { Foo } from 'mod' */
+  /**
+   * @param {Foo} x
+   */
+- |
+  /**
+   * @type {Foo}
+   */
+- |
+  async function load() {
+    const mod = await import('mod').then(m => m.default)
+    return mod
+  }
+invalid:
+- |
+  /**
+   * @param {import('mod').Foo} x
+   */
+- |
+  const y = /** @type {import('mod').Bar} */ (raw)

@@ -1,0 +1,17 @@
+id: no-jsdoc-object-typedef
+language: javascript
+message: >-
+  Drop `{object}` from `@typedef` when `@property` tags follow — use
+  `@typedef Name`, not `@typedef {object} Name`
+severity: warning
+rule:
+  pattern: $COMMENT
+  kind: comment
+  regex: '@typedef\s+\{object\}'
+transform:
+  FIXED:
+    replace:
+      source: $COMMENT
+      replace: '\{object\}\s*'
+      by: ''
+fix: $FIXED

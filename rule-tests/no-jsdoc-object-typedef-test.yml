@@ -1,0 +1,17 @@
+id: no-jsdoc-object-typedef
+valid:
+- |
+  /**
+   * @typedef Foo
+   * @property {string} bar
+   */
+- |
+  /**
+   * @typedef {string} Bar
+   */
+invalid:
+- |
+  /**
+   * @typedef {object} Foo
+   * @property {string} bar
+   */

@@ -1,0 +1,39 @@
+{
+  "name": "@voxpelli/ast-grep-rules",
+  "version": "0.1.0",
+  "description": "Portable, project-authored ast-grep YAML lint rules enforcing house JSDoc/ESM JS conventions (prefer unknown over any, drop {object} from @typedef, hoist inline import('module').Type). Consumed via sgconfig.yml ruleDirs. Data-only (no JS). EXPERIMENTAL staging of a cross-repo extraction from vp-claude's .ast-grep/rules.",
+  "homepage": "https://github.com/voxpelli/ai-evolve/tree/main/packages/ast-grep-rules",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/voxpelli/ai-evolve.git",
+    "directory": "packages/ast-grep-rules"
+  },
+  "author": "Pelle Wessman <pelle@kodfabrik.se> (https://kodfabrik.se/)",
+  "license": "MIT",
+  "engines": {
+    "node": "^22.13.0 || >=24"
+  },
+  "type": "module",
+  "files": [
+    "rules/**/*.yml",
+    "sgconfig.yml"
+  ],
+  "exports": {
+    "./rules/*": "./rules/*",
+    "./sgconfig.yml": "./sgconfig.yml"
+  },
+  "scripts": {
+    "check": "ast-grep test",
+    "test:node": "ast-grep test"
+  },
+  "devDependencies": {
+    "@ast-grep/cli": "^0.44.1"
+  },
+  "bugs": {
+    "url": "https://github.com/voxpelli/ai-evolve/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

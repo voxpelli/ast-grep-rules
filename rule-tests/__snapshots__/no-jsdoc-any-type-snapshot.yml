@@ -1,0 +1,26 @@
+id: no-jsdoc-any-type
+snapshots:
+  ? |
+    /**
+     * @param {any} x
+     */
+  : labels:
+    - source: |-
+        /**
+         * @param {any} x
+         */
+      style: primary
+      start: 0
+      end: 25
+  ? |
+    /**
+     * @returns {any}
+     */
+  : labels:
+    - source: |-
+        /**
+         * @returns {any}
+         */
+      style: primary
+      start: 0
+      end: 25

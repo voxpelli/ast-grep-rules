@@ -1,0 +1,8 @@
+id: no-jsdoc-any-type
+language: javascript
+message: >-
+  Prefer `unknown` over `any` (CLAUDE.md SHOULD) and narrow with type guards
+severity: warning
+rule:
+  kind: comment
+  regex: '@(param|returns|type|property)\s*\{[^}]*\bany\b'

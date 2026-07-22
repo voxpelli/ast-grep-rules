@@ -1,0 +1,10 @@
+id: no-inline-jsdoc-import
+language: javascript
+message: >-
+  Hoist inline `import('module').Type` out of the JSDoc tag — declare it once
+  in a top-level `/** @import { Type } from 'module' */` (placed after the
+  runtime imports) and use the bare `Type` at the use site
+severity: warning
+rule:
+  kind: comment
+  regex: 'import\(\s*[''"][^''"]+[''"]\s*\)\s*\.'

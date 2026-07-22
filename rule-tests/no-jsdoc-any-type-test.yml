@@ -1,0 +1,19 @@
+id: no-jsdoc-any-type
+valid:
+- |
+  /**
+   * @param {unknown} x
+   */
+- |
+  /**
+   * @param {string} x
+   */
+invalid:
+- |
+  /**
+   * @param {any} x
+   */
+- |
+  /**
+   * @returns {any}
+   */

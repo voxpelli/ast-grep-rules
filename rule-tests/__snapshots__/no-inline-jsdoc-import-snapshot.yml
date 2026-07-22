@@ -1,0 +1,21 @@
+id: no-inline-jsdoc-import
+snapshots:
+  ? |
+    /**
+     * @param {import('mod').Foo} x
+     */
+  : labels:
+    - source: |-
+        /**
+         * @param {import('mod').Foo} x
+         */
+      style: primary
+      start: 0
+      end: 39
+  ? |
+    const y = /** @type {import('mod').Bar} */ (raw)
+  : labels:
+    - source: /** @type {import('mod').Bar} */
+      style: primary
+      start: 10
+      end: 42
