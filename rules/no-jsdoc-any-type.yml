@@ -1,12 +1,33 @@
 id: no-jsdoc-any-type
 language: javascript
+# Diagnostic split across ast-grep's fields (see no-jsdoc-object-typedef for the
+# convention): `message` = one line WHAT + the interpolated $TAG; `note` = the
+# decision tree (no var interpolation); `metadata` = machine-readable routing.
+# This is the JUDGMENT rule — it deliberately over-fires on legitimate `any`,
+# so the note NAMES those exceptions rather than pretending every hit is a bug.
 message: >-
-  `any` in a JSDoc `@$TAG` defeats type-checking here (CLAUDE.md SHOULD: prefer
-  `unknown`). Fix: name the concrete type if you know it; otherwise type it
-  `unknown` and NARROW before use — `@voxpelli/typed-utils` `isObject(x)` /
-  `typesafeIsArray(x)` for the object/array boundary, or a `x is T` predicate.
-  Not auto-fixed: the correct narrower is context-specific (only you know what
-  the value actually is).
+  `any` in a JSDoc `@$TAG` defeats type-checking here (prefer `unknown`). Not
+  every `any` should change — see the note's decision tree first.
+note: |
+  Decision tree — pick the FIRST that applies:
+  1. You know the concrete type → name it.
+  2. It is an untyped boundary value → type it `unknown`, then NARROW before
+     use: `@voxpelli/typed-utils` `isObject(x)` / `typesafeIsArray(x)` for the
+     object/array boundary, or a `x is T` predicate. The tsc error at each use
+     site after this change is EXPECTED — it is your signal to add the narrower,
+     NOT to revert to `any`.
+  3. It is a DELIBERATE boundary `any` — LEAVE IT. Two legitimate cases:
+     - a genuinely untyped 3rd-party API value at the boundary, and
+     - a generic top-function constraint `(...args: any[]) => any` (the
+       idiomatic "any function" type; `(...args: unknown[]) => unknown` rejects
+       typed handlers by contravariance, so `any` is the correct bound there).
+  Not auto-fixed: only you know which case applies.
+metadata:
+  autofixable: false
+  edits: context-dependent  # annotation-only for drop-in cases; may add a runtime narrower
+  applyMode: judgment       # over-fires on legitimate boundary / top-function any
+  cheapModelSafe: false     # 4/9 in-pilot — needs judgment + the tsc gate, not a blind sweep
+  gate: tsc --noEmit
 severity: warning
 # `pattern: $COMMENT` binds the whole comment so `transform` can surface WHICH
 # tag carried the `any` into the message (regex named captures can't reach the
@@ -14,6 +35,9 @@ severity: warning
 # — an automatic `any`→`unknown` swap would leave the now-`unknown` value
 # unnarrowed at every use site, trading a silent `any` for a hard tsc error the
 # author still has to resolve by hand; better to point them at the narrower.
+# (A `not:` regex could suppress the `(...args: any[]) => any` top-function case
+# at the AST level, but that hides a teachable exception AND risks masking real
+# `any` nearby — the note-based "leave it" guidance in case 3 is preferred.)
 rule:
   pattern: $COMMENT
   kind: comment

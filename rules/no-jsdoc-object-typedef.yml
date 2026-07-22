@@ -1,9 +1,25 @@
 id: no-jsdoc-object-typedef
 language: javascript
+# Diagnostic is authored as an agent-executable instruction, split across
+# ast-grep's three fields: `message` = one line WHAT (+ the interpolated
+# $NAME); `note` = the HOW (multi-line markdown; note canNOT interpolate $vars,
+# so the captured name stays in `message`); `metadata` = machine-readable
+# routing so a scout→apply harness picks a strategy without parsing prose.
 message: >-
   Redundant `{object}` on `@typedef {object} $NAME` — the `@property` tags
-  below already define the shape. AUTO-FIXABLE: delete `{object} ` so it reads
-  `@typedef $NAME` (apply this rule's `fix`, i.e. `ast-grep scan --update-all`).
+  below already define the shape. Auto-fixable; see note.
+note: |
+  Delete `{object} ` so the tag reads `@typedef NAME`. This is the ONLY one of
+  the three JSDoc rules that is bulk-`--update-all`-safe: apply this rule's
+  `fix` directly with `ast-grep scan --update-all`. The `@property` tags below
+  already carry the shape, so removing `{object}` is behaviour-neutral — a pure
+  syntactic simplification, never a type change.
+metadata:
+  autofixable: true
+  edits: 1
+  applyMode: bulk          # the single mechanically-safe rule — blind --fix is OK
+  cheapModelSafe: true
+  gate: tsc --noEmit
 severity: warning
 rule:
   pattern: $COMMENT

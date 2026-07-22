@@ -1,11 +1,30 @@
 id: no-inline-jsdoc-import
 language: javascript
+# Diagnostic split across ast-grep's fields (see no-jsdoc-object-typedef for the
+# convention): `message` = one line WHAT + the interpolated $MOD/$TYP (the
+# concrete captured tokens); `note` = the ordered HOW (no var interpolation);
+# `metadata` = machine-readable routing.
 message: >-
-  Inline import() in a JSDoc type — hoist it in two edits: (1) add a top-level
-  `/** @import { $TYP } from '$MOD' */` after the file's import statements;
-  (2) replace the inline `import('$MOD').$TYP` here with the bare `$TYP`. Not
-  auto-fixed on purpose — doing only (2) leaves `$TYP` undefined until (1)
-  exists, and ast-grep can't make edit (1) from this match.
+  Inline `import('$MOD').$TYP` in a JSDoc type — hoist it to a top-level
+  `@import`. Detection-only (see note): the two-edit hoist can't be a
+  single-node autofix.
+note: |
+  Two ordered edits — do BOTH, or tsc breaks:
+  1. Add a top-level `/** @import { NAME } from 'MODULE' */` after the file's
+     `import`/`require` statements (MODULE + NAME are the tokens in the message
+     above). If an `@import` from that MODULE ALREADY exists, ADD the name to
+     its brace list — do NOT add a second `@import` line for the same module
+     (that is a TS2300 duplicate-identifier error).
+  2. Replace the inline `import('MODULE').NAME` at this site with the bare `NAME`.
+
+  A tsc error after edit 2 alone is EXPECTED — it means edit 1 is still missing,
+  not that the change is wrong. Applying only edit 2 leaves `NAME` undefined.
+metadata:
+  autofixable: false       # forced: ast-grep's fix is single-node; edit 1 is elsewhere
+  edits: 2
+  applyMode: agent         # deterministic, but two edits in two locations
+  cheapModelSafe: true     # ~99% in-pilot with the dedup rule above; the gate catches the rest
+  gate: tsc --noEmit
 severity: warning
 # NOT auto-fixable (deliberately no `fix`): a correct fix must BOTH rewrite the
 # inline ref → bare `$TYP` AND add a top-level `/** @import { $TYP } from
