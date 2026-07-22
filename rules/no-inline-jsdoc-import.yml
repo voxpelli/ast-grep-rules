@@ -5,6 +5,17 @@ message: >-
   in a top-level `/** @import { Type } from 'module' */` (placed after the
   runtime imports) and use the bare `Type` at the use site
 severity: warning
+# NOT auto-fixable (deliberately no `fix`/`transform`): a correct fix must BOTH
+# rewrite the inline `import('mod').Type` → bare `Type` AND add a top-level
+# `/** @import { Type } from 'mod' */` elsewhere in the file. ast-grep's fix is
+# node-local (it can only rewrite the matched comment), so auto-rewriting just
+# the inline ref would leave `Type` undefined. Hoist by hand.
 rule:
-  kind: comment
-  regex: 'import\(\s*[''"][^''"]+[''"]\s*\)\s*\.'
+  all:
+    # JSDoc block comments only — `^/\*\*` excludes `//` line comments and plain
+    # `/* … */` blocks, which legitimately mention import() in prose without it
+    # being a type annotation (the false-positive pain point).
+    - kind: comment
+    - regex: '^/\*\*'
+    # inline `import('mod').Type` member access inside a tag
+    - regex: 'import\(\s*[''"][^''"]+[''"]\s*\)\s*\.'

@@ -15,11 +15,13 @@ in vp-claude.
 
 ## Rules
 
-| id | severity | catches | fixable |
-|----|----------|---------|---------|
-| `no-jsdoc-object-typedef` | warning | `@typedef {object} Name` followed by `@property` tags | **yes** — a surgical `transform.replace` strips just `{object} ` |
-| `no-jsdoc-any-type` | warning | `@param`/`@returns`/`@type`/`@property {any}` | no — the correct narrower type is context-specific |
-| `no-inline-jsdoc-import` | warning | inline `import('module').Type` inside a JSDoc tag | no — hoist to a top-level `/** @import { Type } from 'module' */` and use the bare `Type` |
+| id | severity | catches | auto-fixable |
+|----|----------|---------|--------------|
+| `no-jsdoc-object-typedef` | warning | `@typedef {object} Name` followed by `@property` tags | **yes** — a surgical `transform.replace` strips just `{object} `; a node-local rewrite fully fixes it, so `ast-grep scan --update-all` cleans it up |
+| `no-jsdoc-any-type` | warning | `@param`/`@returns`/`@type`/`@property {any}` | **no** — the correct narrower type (`unknown`, a named type, a union) is context-specific; a machine can't pick it |
+| `no-inline-jsdoc-import` | warning | inline `import('module').Type` inside a **JSDoc block** (`/** … */` only — `//` and plain `/* … */` comments that mention `import()` in prose are ignored) | **no** — a correct fix must BOTH rewrite the inline ref → bare `Type` AND add a top-level `/** @import { Type } from 'module' */`; ast-grep's fix is node-local (matched comment only) and can't insert the second edit, so rewriting alone would leave `Type` undefined. Hoist by hand |
+
+Why the split matters: only `no-jsdoc-object-typedef` is a *single-location* transform, so it's the one wired for `--update-all`. The other two flag drift that needs a human decision (which narrower type) or a second, non-local edit (the hoisted `@import`) that ast-grep can't perform safely — so they stay report-only.
 
 All three are `severity: warning` heuristics (house `SHOULD`s), so
 `ast-grep scan` exits 0 on findings — they surface, they do not fail CI on their

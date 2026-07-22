@@ -1,5 +1,6 @@
 id: no-inline-jsdoc-import
 valid:
+# the correct form: top-level @import + bare type at the use site
 - |
   /** @import { Foo } from 'mod' */
   /**
@@ -9,11 +10,21 @@ valid:
   /**
    * @type {Foo}
    */
+# runtime dynamic import is a call expression, not a JSDoc type ref
 - |
   async function load() {
     const mod = await import('mod').then(m => m.default)
     return mod
   }
+# a `//` line comment that merely mentions import() in prose — NOT a type ref
+- |
+  // see import('mod').Foo for the shape
+# a string literal, not a comment node
+- |
+  const s = "import('mod').Foo"
+# a plain `/* … */` block comment (not JSDoc `/**`) mentioning import() in prose
+- |
+  /* import('mod').Foo lives upstream */
 invalid:
 - |
   /**
