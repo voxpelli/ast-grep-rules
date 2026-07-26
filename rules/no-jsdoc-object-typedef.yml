@@ -1,39 +1,29 @@
 id: no-jsdoc-object-typedef
 language: javascript
 # Diagnostic is authored as an agent-executable instruction, split across
-# ast-grep's three fields: `message` = one line WHAT (+ the interpolated
-# $NAME); `note` = the HOW (multi-line markdown; note canNOT interpolate $vars,
-# so the captured name stays in `message`); `metadata` = machine-readable
-# routing so a scout→apply harness picks a strategy without parsing prose.
+# ast-grep's three fields: `message` = one line WHAT; `note` = the HOW
+# (multi-line markdown); `metadata` = machine-readable routing so a scout→apply
+# harness picks a strategy without parsing prose.
+# NOTE: `$NAME` interpolation and `fix:` were lost when ast-grep 0.45.0 broke
+# `pattern: $C` binding for comment nodes. Revert to the `transform`-based
+# version if/when ast-grep restores comment metavariable binding.
 message: >-
-  Redundant `{object}` on `@typedef {object} $NAME` — the `@property` tags
-  below already define the shape. Auto-fixable; see note.
+  Redundant `{object}` on `@typedef {object}` — the `@property` tags below
+  already define the shape. See note for the manual fix.
 note: |
-  Delete `{object} ` so the tag reads `@typedef NAME`. This is the ONLY one of
-  the three JSDoc rules that is bulk-`--update-all`-safe: apply this rule's
-  `fix` directly with `ast-grep scan --update-all`. The `@property` tags below
-  already carry the shape, so removing `{object}` is behaviour-neutral — a pure
-  syntactic simplification, never a type change.
+  Delete `{object} ` so the tag reads `@typedef NAME`. The `@property` tags
+  below already carry the shape, so removing `{object}` is behaviour-neutral
+  — a pure syntactic simplification, never a type change.
+  NOTE: This rule was previously auto-fixable but the `fix` was lost when
+  ast-grep 0.45.0 broke `pattern: $C` binding for comment nodes. The fix is
+  still a simple manual edit: remove `{object} ` from the `@typedef` line.
 metadata:
-  autofixable: true
+  autofixable: false      # was true; pattern metavariable binding broken in 0.45.0
   edits: 1
-  applyMode: bulk          # the single mechanically-safe rule — blind --fix is OK
+  applyMode: manual       # was bulk; now requires manual edit until upstream fix
   cheapModelSafe: true
   gate: tsc --noEmit
 severity: warning
 rule:
-  pattern: $COMMENT
   kind: comment
   regex: '@typedef\s+\{object\}'
-transform:
-  FIXED:
-    replace:
-      source: $COMMENT
-      replace: '\{object\}\s*'
-      by: ''
-  NAME:
-    replace:
-      source: $COMMENT
-      replace: '(?s)^.*?@typedef\s+\{object\}\s+(?<n>[A-Za-z0-9_$]+).*$'
-      by: '$n'
-fix: $FIXED

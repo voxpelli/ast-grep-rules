@@ -30,6 +30,6 @@
     "test": "ast-grep test"
   },
   "devDependencies": {
-    "@ast-grep/cli": "^0.44.1"
+    "@ast-grep/cli": "^0.45.0"
   }
 }

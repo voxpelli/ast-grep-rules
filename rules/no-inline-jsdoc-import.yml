@@ -1,20 +1,20 @@
 id: no-inline-jsdoc-import
 language: javascript
 # Diagnostic split across ast-grep's fields (see no-jsdoc-object-typedef for the
-# convention): `message` = one line WHAT + the interpolated $MOD/$TYP (the
-# concrete captured tokens); `note` = the ordered HOW (no var interpolation);
-# `metadata` = machine-readable routing.
+# convention): `message` = one line WHAT; `note` = the ordered HOW (no var
+# interpolation); `metadata` = machine-readable routing.
+# NOTE: `$MOD`/`$TYP` interpolation was lost when ast-grep 0.45.0 broke `pattern:
+# $C` binding for comment nodes. Revert to the `transform`-based version if/when
+# ast-grep restores comment metavariable binding.
 message: >-
-  Inline `import('$MOD').$TYP` in a JSDoc type — hoist it to a top-level
-  `@import`. Detection-only (see note): the two-edit hoist can't be a
-  single-node autofix.
+  Inline `import()` in a JSDoc type — hoist it to a top-level `@import`.
+  Detection-only (see note): the two-edit hoist can't be a single-node autofix.
 note: |
   Two ordered edits — do BOTH, or tsc breaks:
   1. Add a top-level `/** @import { NAME } from 'MODULE' */` after the file's
-     `import`/`require` statements (MODULE + NAME are the tokens in the message
-     above). If an `@import` from that MODULE ALREADY exists, ADD the name to
-     its brace list — do NOT add a second `@import` line for the same module
-     (that is a TS2300 duplicate-identifier error).
+     `import`/`require` statements. If an `@import` from that MODULE ALREADY
+     exists, ADD the name to its brace list — do NOT add a second `@import` line
+     for the same module (that is a TS2300 duplicate-identifier error).
   2. Replace the inline `import('MODULE').NAME` at this site with the bare `NAME`.
 
   A tsc error after edit 2 alone is EXPECTED — it means edit 1 is still missing,
@@ -27,17 +27,14 @@ metadata:
   gate: tsc --noEmit
 severity: warning
 # NOT auto-fixable (deliberately no `fix`): a correct fix must BOTH rewrite the
-# inline ref → bare `$TYP` AND add a top-level `/** @import { $TYP } from
-# '$MOD' */` elsewhere in the file. ast-grep's fix is node-local (the matched
+# inline ref → bare `NAME` AND add a top-level `/** @import { NAME } from
+# 'MODULE' */` elsewhere in the file. ast-grep's fix is node-local (the matched
 # comment only) and can't insert that second edit, so rewriting alone would
-# leave `$TYP` undefined. Hoist by hand. The `transform` below feeds the
-# message only — the concrete module + type of the FIRST inline import in the
-# comment (regex named captures can't reach the message directly; per ast-grep
-# they must go through `transform`, the same shape as no-jsdoc-object-typedef).
+# leave `NAME` undefined. Hoist by hand.
+# NOTE: The `transform` for `$MOD`/`$TYP` was removed because ast-grep 0.45.0
+# broke `pattern: $C` binding for comment nodes. The message is now static.
 rule:
   all:
-    # Bind the whole comment to $C so `transform` can regex-surgery its text.
-    - pattern: $C
     - kind: comment
     # JSDoc block comments only: `^/\*\*` excludes `//` line comments and plain
     # `/* … */` blocks that merely mention import() in prose. `(?s)` lets `.` span
@@ -62,14 +59,3 @@ rule:
     # breaks the type-guard.
     - not:
         regex: '\bis\s+import\('
-transform:
-  MOD:
-    replace:
-      source: $C
-      replace: '(?s)^.*?import\(\s*[''"](?<mod>[^''"]+)[''"]\s*\)\s*\..*$'
-      by: '$mod'
-  TYP:
-    replace:
-      source: $C
-      replace: '(?s)^.*?import\(\s*[''"][^''"]+[''"]\s*\)\s*\.(?<typ>[A-Za-z0-9_$]+).*$'
-      by: '$typ'

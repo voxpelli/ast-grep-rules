@@ -5,12 +5,7 @@ snapshots:
      * @typedef {object} Foo
      * @property {string} bar
      */
-  : fixed: |
-      /**
-       * @typedef Foo
-       * @property {string} bar
-       */
-    labels:
+  : labels:
     - source: |-
         /**
          * @typedef {object} Foo

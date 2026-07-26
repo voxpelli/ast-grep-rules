@@ -25,11 +25,14 @@ workflow under `workflows/` (an example script, not gated — see
 
 | id | severity | catches | auto-fixable |
 |----|----------|---------|--------------|
-| `no-jsdoc-object-typedef` | warning | `@typedef {object} Name` followed by `@property` tags | **yes** — a surgical [`transform`](https://ast-grep.github.io/reference/yaml.html#transform) strips just `{object} `; a node-local [`fix`](https://ast-grep.github.io/reference/yaml.html#fix) fully repairs it, so [`ast-grep scan --update-all`](https://ast-grep.github.io/reference/cli/scan.html) cleans it up |
+| `no-jsdoc-object-typedef` | warning | `@typedef {object} Name` followed by `@property` tags | **no** — a one-token manual edit (delete `{object} `) fully repairs it; the `transform`/`fix` auto-fix was lost to an ast-grep 0.45.0 regression (see callout below) |
 | `no-jsdoc-any-type` | warning | `@param`/`@returns`/`@type`/`@property {any}` | **no** — the correct narrower type (`unknown`, a named type, a union) is context-specific; a machine can't pick it |
 | `no-inline-jsdoc-import` | warning | inline `import('module').Type` at a **use-site** inside a **JSDoc block** (`/** … */` only — `//` and plain `/* … */` prose are ignored). **Excludes** `@typedef {import(...)}` (a type ALIAS / cross-module re-export — the inline import IS the definition) and a `x is import(...).T` type-predicate position (the hoisted `@import` doesn't resolve there on the TS/JSDoc toolchain) | **no** — a correct fix must BOTH rewrite the inline ref → bare `Type` AND add a top-level `/** @import { Type } from 'module' */`; ast-grep's fix is node-local (matched comment only) and can't insert the second edit, so rewriting alone would leave `Type` undefined. Hoist by hand |
 
-Why the split matters: only `no-jsdoc-object-typedef` is a *single-location* transform, so it's the one wired for `--update-all`. The other two flag drift that needs a human decision (which narrower type) or a second, non-local edit (the hoisted `@import`) that ast-grep can't perform safely — so they stay report-only.
+Why the split matters: `no-jsdoc-object-typedef` is a *single-location* edit (delete one token), so it would be the natural `--update-all` candidate — but its auto-fix is currently suspended (see callout). The other two flag drift that needs a human decision (which narrower type) or a second, non-local edit (the hoisted `@import`) that ast-grep can't perform safely — so they stay report-only.
+
+> [!WARNING]
+> **Known limitation — ast-grep 0.45.0 regression.** ast-grep 0.45.0 deliberately made `Smart` strictness (the default for `pattern:`) skip comment/extra nodes, which broke binding a metavariable to a comment node via `pattern: $C` + `kind: comment`. All three rules relied on that for `transform`-based message interpolation (`$TAG`/`$NAME`/`$MOD`/`$TYP`), and `no-jsdoc-object-typedef` additionally relied on it for its `fix:`. **Detection still works** — all three still flag their patterns as warnings — but messages are now static and the `{object} ` auto-fix is gone. The full root-cause analysis and the revert path (restore the `transform`/`fix` form once upstream fixes comment-metavariable binding) live in [`COMPAT-FIX-0-45.md`](./COMPAT-FIX-0-45.md). The sweep workflow's bulk-fix path is suspended until then.
 
 All three are `severity: warning` heuristics (house `SHOULD`s), so
 `ast-grep scan` exits 0 on findings — they surface, they do not fail CI on their
@@ -42,12 +45,16 @@ across three ast-grep fields ([rule config reference](https://ast-grep.github.io
 with distinct jobs:
 
 - **[`message`](https://ast-grep.github.io/reference/yaml.html#message)** — one
-  line: *what* is wrong, with the concrete captured tokens interpolated
-  (`$MOD`/`$TYP`, `$TAG`, `$NAME`). Rendered as the diagnostic headline. ast-grep
-  interpolates `$`-vars here (fed via
-  [`transform`](https://ast-grep.github.io/reference/yaml.html#transform)) — a
+  line: *what* is wrong, rendered as the diagnostic headline. The rules are
+  designed to interpolate the concrete captured tokens here
+  (`$MOD`/`$TYP`, `$TAG`, `$NAME`) via
+  [`transform`](https://ast-grep.github.io/reference/yaml.html#transform) — a
   regex named capture can't reach `message` directly, so it goes through
-  `transform`.
+  `transform`. **Currently static** (see the 0.45.0 callout): ast-grep 0.45.0 broke
+  comment-metavariable binding, so `$`-interpolation is suspended and messages
+  carry the *what* without the *which token*. The `transform`-based form is
+  documented in [`COMPAT-FIX-0-45.md`](./COMPAT-FIX-0-45.md) for when upstream
+  restores it.
 - **[`note`](https://ast-grep.github.io/reference/yaml.html#note)** — multi-line
   markdown: the *ordered how-to-repair* (or, for the `any` rule, a decision
   tree). Rendered as the `= …` block beneath the message. Per the docs, `note`
@@ -69,7 +76,7 @@ documents:
 
 | field | type | options | meaning |
 |-------|------|---------|---------|
-| `autofixable` | boolean | `true` · `false` | The rule has a [`fix:`](https://ast-grep.github.io/reference/yaml.html#fix) that fully repairs the finding node-locally, so [`ast-grep scan --update-all`](https://ast-grep.github.io/reference/cli/scan.html) (`-U`) is safe to run unattended. Only `no-jsdoc-object-typedef` is `true`. |
+| `autofixable` | boolean | `true` · `false` | The rule has a [`fix:`](https://ast-grep.github.io/reference/yaml.html#fix) that fully repairs the finding node-locally, so [`ast-grep scan --update-all`](https://ast-grep.github.io/reference/cli/scan.html) (`-U`) is safe to run unattended. Currently **none** are `true` — `no-jsdoc-object-typedef` was `true` until ast-grep 0.45.0 broke its `fix:` (see the callout). |
 | `edits` | number \| string | `1` · `2` · `context-dependent` | How many source edits a correct fix takes. `2` means the second edit lands in a **different location** than the match — which is exactly why ast-grep can't autofix it. `context-dependent` = the count depends on how the flagged value is used. |
 | `applyMode` | enum | `bulk` · `agent` · `judgment` | How to apply the fix. `bulk` = blind `--update-all`. `agent` = an LLM applies the deterministic recipe in `note`, then the `gate` verifies. `judgment` = needs genuine type judgment; the rule over-fires on legitimate cases the model must recognise and skip. |
 | `cheapModelSafe` | boolean | `true` · `false` | Whether a cheap model (e.g. Haiku) applies the fix reliably **when gated by `gate`**. Calibrated from the pilot below — a measured value, not an aspiration. |
@@ -79,7 +86,7 @@ Per-rule values:
 
 | rule | `autofixable` | `edits` | `applyMode` | `cheapModelSafe` | `gate` |
 |------|---------------|---------|-------------|------------------|--------|
-| `no-jsdoc-object-typedef` | `true` | `1` | `bulk` | `true` | `tsc --noEmit` |
+| `no-jsdoc-object-typedef` | `false` | `1` | `manual` | `true` | `tsc --noEmit` |
 | `no-inline-jsdoc-import` | `false` | `2` | `agent` | `true` | `tsc --noEmit` |
 | `no-jsdoc-any-type` | `false` | `context-dependent` | `judgment` | `false` | `tsc --noEmit` |
 
@@ -87,8 +94,11 @@ Per-rule values:
 
 These rules are designed so a **cheap model can apply the fix from the diagnostic
 alone**, made safe by the `tsc` gate rather than by agent consensus. In ESLint's
-vocabulary: `no-jsdoc-object-typedef` is a `fix` (mechanically safe); the other
-two are `suggestion`-class — agent-in-the-loop, never a blind `--fix`.
+vocabulary: all three are currently `suggestion`-class — agent-in-the-loop or
+manual, never a blind `--fix`. `no-jsdoc-object-typedef` was a `fix`
+(mechanically safe, blind `--update-all`) until ast-grep 0.45.0 broke its
+`fix:` (see the callout); it is now a manual one-token edit (delete `{object} `),
+still cheap-model-safe.
 
 **The `tsc` gate is the semantic backstop.** "Auto-fixable" is a *syntactic*
 property: a structural detector (ast-grep, Semgrep) validates the *shape* of an
@@ -112,7 +122,7 @@ fails the gate even when it is syntactically valid.
 
 | rule | raw cheap-model success | apply as |
 |------|-------------------------|----------|
-| `no-jsdoc-object-typedef` | 100% | blind `--update-all` |
+| `no-jsdoc-object-typedef` | 100% | manual delete of `{object} ` (auto-fix suspended by the 0.45.0 regression) |
 | `no-inline-jsdoc-import` | ~99% | agent + `tsc` gate — the single miss was a duplicate `@import` (a TS2300), now pre-empted by the note's dedup instruction |
 | `no-jsdoc-any-type` | ~4/9 | agent + gate, expect escalation to a stronger model — it is a judgment call, not a mechanical one |
 
@@ -138,6 +148,9 @@ stragglers; the repo's own gate is the deterministic cross-check; the run return
 a capability scorecard. It is a documented example, not gated by this package's
 `ast-grep test` — pass a repo's `root` / `moduleGlobs` / `gate` via the
 Workflow tool's `args` (see the header of the file for the full arg reference).
+Its bulk-fix step (the `--update-all` pass over `no-jsdoc-object-typedef`) is
+suspended until ast-grep restores comment-metavariable binding; the report and
+agent-applied paths still work.
 
 ## Consuming the rules
 
