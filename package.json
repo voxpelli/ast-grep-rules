@@ -1,11 +1,14 @@
 {
   "name": "@voxpelli/ast-grep-rules",
   "version": "0.1.0",
-  "description": "Portable, project-authored ast-grep YAML lint rules enforcing house JSDoc/ESM JS conventions (prefer unknown over any, drop {object} from @typedef, hoist inline import('module').Type). Consumed via sgconfig.yml ruleDirs. Rules are data-only YAML; also ships an optional Claude Code sweep workflow (workflows/). EXPERIMENTAL staging of a cross-repo extraction from vp-claude's .ast-grep/rules.",
-  "homepage": "https://github.com/voxpelli/ast-grep-rules",
+  "description": "Portable, project-authored ast-grep YAML lint rules enforcing house JSDoc/ESM JS conventions",
+  "homepage": "https://tangled.org/voxpelli.com/ast-grep-rules",
   "repository": {
     "type": "git",
     "url": "https://github.com/voxpelli/ast-grep-rules.git"
+  },
+  "bugs": {
+    "url": "https://tangled.org/voxpelli.com/ast-grep-rules/issues"
   },
   "author": "Pelle Wessman <pelle@kodfabrik.se> (https://kodfabrik.se/)",
   "license": "MIT",
