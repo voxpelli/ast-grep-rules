@@ -5,7 +5,7 @@
   "homepage": "https://tangled.org/voxpelli.com/ast-grep-rules",
   "repository": {
     "type": "git",
-    "url": "https://github.com/voxpelli/ast-grep-rules.git"
+    "url": "git+https://github.com/voxpelli/ast-grep-rules.git"
   },
   "bugs": {
     "url": "https://tangled.org/voxpelli.com/ast-grep-rules/issues"
