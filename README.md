@@ -1,19 +1,15 @@
 # @voxpelli/ast-grep-rules
 
 **EXPERIMENTAL** staged extraction of the portable, project-authored
-[ast-grep](https://ast-grep.github.io/) JSDoc/ESM lint rules originally carried
-in `voxpelli/vp-claude`'s `.ast-grep/rules/`, plus one new rule
-(`no-inline-jsdoc-import`). The rules themselves are data-only YAML (+ snapshot
-tests), so the package opts out of the JS gates (tsc / eslint / type-coverage /
-tstyche) the sibling `@voxpelli/*` packages run — its `check` / `test:node`
-scripts run `ast-grep test` instead. It also ships one optional Claude Code
-sweep workflow under `workflows/` (an example script, not gated — see
-[Applying these rules with an AI agent](#applying-these-rules-with-an-ai-agent)).
+[ast-grep](https://ast-grep.github.io/) JSDoc/ESM lint rules.
 
 The rules encode house conventions shared across the voxpelli siblings:
 JSDoc-typed JavaScript, ESM-only, prefer `unknown` over `any`. They are the
-narrow, cross-repo-agreed slice — the vp-claude-specific and bash rules stay
-in vp-claude.
+narrow, cross-repo-agreed slice.
+
+It also ships one optional Claude Code
+sweep workflow under `workflows/` (an example script, not gated — see
+[Applying these rules with an AI agent](#applying-these-rules-with-an-ai-agent)).
 
 ## Rules
 
