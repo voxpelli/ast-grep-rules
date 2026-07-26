@@ -8,18 +8,18 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/voxpelli/ast-grep-rules)
 ![human-directed, AI-built](https://img.shields.io/badge/human--directed-AI--built-6B4FC8?style=flat)
 
-The rules encode house conventions shared across the voxpelli siblings:
-JSDoc-typed JavaScript, ESM-only, prefer `unknown` over `any`. They are the
-narrow, cross-repo-agreed slice.
-
-It also ships one optional Claude Code
-sweep workflow under `workflows/` (an example script, not gated — see
-[Applying these rules with an AI agent](#applying-these-rules-with-an-ai-agent)).
-
 > [!IMPORTANT]
 > **Issues and pull requests live on [Tangled](https://tangled.org/voxpelli.com/ast-grep-rules)** — not on the
 > [GitHub mirror](https://github.com/voxpelli/ast-grep-rules), where issues are disabled and only collaborators
 > can open pull requests.
+
+The rules encode house conventions shared across the voxpelli siblings:
+JSDoc-typed JavaScript, ESM-only, prefer `unknown` over `any`. They are the
+narrow, cross-repo-agreed slice.
+
+Also ships an optional Claude Code
+workflow under `workflows/` (an example script, not gated — see
+[Applying these rules with an AI agent](#applying-these-rules-with-an-ai-agent)).
 
 ## Rules
 
